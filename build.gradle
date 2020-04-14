@@ -62,11 +62,6 @@ apply from: "$rootDir/gradle/publish-jar.gradle"
 
 sourceCompatibility = 1.8
 
-tasks.withType(JavaCompile) {
-    options.compilerArgs += ['-Werror']
-}
-
-
 dependencies {
     implementation 'com.palantir.safe-logging:preconditions'
     implementation 'com.google.guava:guava'
@@ -82,4 +77,18 @@ dependencies {
 
     testAnnotationProcessor 'org.immutables:value'
     testCompileOnly 'org.immutables:value::annotations'
+}
+
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs += ['-Xlint:deprecation', '-Werror']
+}
+
+dependencies {
+    compileOnly 'com.google.code.findbugs:jsr305'
+    annotationProcessor 'com.uber.nullaway:nullaway'
+}
+
+tasks.withType(JavaCompile) {
+    options.errorprone.errorproneArgs += ['-XepOpt:NullAway:AnnotatedPackages=com.palantir']
 }
