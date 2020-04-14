@@ -1,0 +1,8 @@
+rootProject.name = 'refreshable'
+
+boolean isCiServer = System.getenv().containsKey('CI')
+buildCache {
+    local {
+        enabled = !isCiServer
+    }
+}
