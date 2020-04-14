@@ -58,6 +58,7 @@ repositories {
 
 apply plugin: 'java-library'
 apply plugin: 'org.inferred.processors'
+apply from: "$rootDir/gradle/publish-jar.gradle"
 
 sourceCompatibility = 1.8
 
