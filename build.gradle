@@ -41,13 +41,10 @@ buildscript {
 apply plugin: 'com.palantir.baseline'
 apply plugin: 'com.palantir.consistent-versions'
 apply plugin: 'com.palantir.git-version'
+apply plugin: 'com.palantir.java-format'
 
 group 'com.palantir.refreshable'
 version System.env.CIRCLE_TAG ?: gitVersion()
-
-apply plugin: 'com.palantir.java-format'
-
-version rootProject.version
 
 repositories {
     jcenter()
@@ -78,7 +75,6 @@ dependencies {
     testAnnotationProcessor 'org.immutables:value'
     testCompileOnly 'org.immutables:value::annotations'
 }
-
 
 tasks.withType(JavaCompile) {
     options.compilerArgs += ['-Xlint:deprecation', '-Werror']

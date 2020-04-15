@@ -16,12 +16,6 @@
 
 package com.palantir.refreshable;
 
-import com.palantir.logsafe.Preconditions;
-import com.palantir.logsafe.exceptions.SafeRuntimeException;
-import java.time.Duration;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -51,42 +45,7 @@ public interface Refreshable<T> extends Supplier<T> {
      */
     <R> Refreshable<R> map(Function<? super T, R> function);
 
-    /** Creates a refreshable that updates based on the result of invoking the {@link Callable} at the given period. */
-    @SuppressWarnings("FutureReturnValueIgnored")
-    static <T> Refreshable<T> create(
-            Callable<T> callable,
-            Consumer<Throwable> exceptionHandler,
-            ScheduledExecutorService executor,
-            Duration refreshInterval) {
-        Preconditions.checkArgument(
-                refreshInterval.toNanos() > 0, "Cannot create Refreshable with 0 or negative refresh interval");
-
-        DefaultRefreshable<T> refreshable = new DefaultRefreshable<>(call(callable));
-
-        executor.scheduleWithFixedDelay(
-                () -> {
-                    try {
-                        refreshable.update(callable.call());
-                    } catch (Throwable e) {
-                        exceptionHandler.accept(e);
-                    }
-                },
-                refreshInterval.toNanos(),
-                refreshInterval.toNanos(),
-                TimeUnit.NANOSECONDS);
-
-        return refreshable;
-    }
-
     static <T> Refreshable<T> only(T only) {
         return new DefaultRefreshable<>(only);
-    }
-
-    static <T> T call(Callable<T> callable) {
-        try {
-            return callable.call();
-        } catch (Exception e) {
-            throw new SafeRuntimeException("Cannot create Refreshable unless initial value is constructable", e);
-        }
     }
 }
