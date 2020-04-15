@@ -67,7 +67,7 @@ public final class RefreshableTest {
     public void before() throws Exception {
         scheduler = new DeterministicScheduler();
         updateConfig(CONFIG);
-        refreshable = Refreshable.create(producer, exceptionHandler, scheduler, Duration.ofMinutes(1));
+        refreshable = Refreshables.create(producer, exceptionHandler, scheduler, Duration.ofMinutes(1));
     }
 
     @Test
@@ -164,22 +164,22 @@ public final class RefreshableTest {
         when(producer.call()).thenThrow(IllegalArgumentException.class);
 
         assertThatExceptionOfType(RuntimeException.class)
-                .isThrownBy(() -> Refreshable.create(producer, exceptionHandler, scheduler, Duration.ofMinutes(1)));
+                .isThrownBy(() -> Refreshables.create(producer, exceptionHandler, scheduler, Duration.ofMinutes(1)));
     }
 
     @Test
     public void testRefreshable_doesNotThrowIfRefreshIntervalInMillis() {
-        assertThatCode(() -> Refreshable.create(() -> null, throwable -> {}, scheduler, Duration.ofMillis(1)))
+        assertThatCode(() -> Refreshables.create(() -> null, throwable -> {}, scheduler, Duration.ofMillis(1)))
                 .doesNotThrowAnyException();
     }
 
     @Test
     public void testRefreshable_throwsMeaningfulExceptionIfCreatedWithDurationOfZeroOrNegative() {
-        assertThatThrownBy(() -> Refreshable.create(() -> null, throwable -> {}, scheduler, Duration.ofMillis(0)))
+        assertThatThrownBy(() -> Refreshables.create(() -> null, throwable -> {}, scheduler, Duration.ofMillis(0)))
                 .isInstanceOf(SafeIllegalArgumentException.class)
                 .hasMessage("Cannot create Refreshable with 0 or negative refresh interval");
 
-        assertThatThrownBy(() -> Refreshable.create(() -> null, throwable -> {}, scheduler, Duration.ofMillis(-10)))
+        assertThatThrownBy(() -> Refreshables.create(() -> null, throwable -> {}, scheduler, Duration.ofMillis(-10)))
                 .isInstanceOf(SafeIllegalArgumentException.class)
                 .hasMessage("Cannot create Refreshable with 0 or negative refresh interval");
     }
