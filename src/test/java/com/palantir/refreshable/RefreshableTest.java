@@ -310,6 +310,18 @@ public final class RefreshableTest {
         assertThat(subscriberWeakRef.get()).isNull();
     }
 
+    @Test
+    public void map_results_are_not_leaked_when_updates_dont_occur() {
+        DefaultRefreshable<Integer> root = new DefaultRefreshable<>(5);
+        int iterations = 100;
+        for (int i = 0; i < iterations; i++) {
+            // simulate continued intermittent map invocations
+            root.map(number -> number);
+            System.gc();
+        }
+        assertThat(root.subscribers()).isLessThan(iterations);
+    }
+
     private void updateConfig(Config conf) throws Exception {
         when(producer.call()).thenReturn(conf);
         scheduler.tick(1, TimeUnit.MINUTES);

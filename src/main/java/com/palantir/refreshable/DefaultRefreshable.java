@@ -27,6 +27,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.annotation.Nullable;
@@ -42,12 +43,18 @@ import org.slf4j.LoggerFactory;
  */
 public final class DefaultRefreshable<T> implements Refreshable<T> {
     private static final Logger log = LoggerFactory.getLogger(DefaultRefreshable.class);
+    /**
+     * Every ten times refreshable.map is called without an update we must purge SelfRemovingMapSubscriber instances
+     * whose children have been reaped.
+     */
+    private static final int CLEAN_THRESHOLD = 10;
 
     @GuardedBy("this")
     private final Set<Consumer<? super T>> orderedSubscribers = new LinkedHashSet<>();
 
     private final RootSubscriberTracker rootSubscriberTracker;
     private volatile T current;
+    private final AtomicInteger mapsSinceLastUpdate = new AtomicInteger();
 
     /**
      * Ensures that in a long chain of mapped refreshables, intermediate ones can't be garbage collected if derived
@@ -117,11 +124,21 @@ public final class DefaultRefreshable<T> implements Refreshable<T> {
 
     @Override
     public synchronized <R> Refreshable<R> map(Function<? super T, R> function) {
+        if (mapsSinceLastUpdate.incrementAndGet() > CLEAN_THRESHOLD) {
+            // iterating over a copy allows SelfRemovingSubscribers to remove themselves without
+            // ConcurrentModificationExceptions
+            ImmutableList.copyOf(orderedSubscribers).forEach(value -> {
+                if (value instanceof SelfRemovingMapSubscriber) {
+                    ((SelfRemovingMapSubscriber<?, ?>) value).disposeIfChildHasBeenCollected();
+                }
+            });
+            mapsSinceLastUpdate.set(0);
+        }
         R initialChildValue = function.apply(current);
         DefaultRefreshable<R> child = createChild(initialChildValue);
 
         SelfRemovingMapSubscriber<? super T, R> mapSubscriber = new SelfRemovingMapSubscriber<>(function, child);
-        Disposable cleanUp = subscribeToSelf(mapSubscriber::updateChildIfItStillExists);
+        Disposable cleanUp = subscribeToSelf(mapSubscriber);
         mapSubscriber.cleanUpSubscription = cleanUp;
 
         return child;
@@ -153,7 +170,7 @@ public final class DefaultRefreshable<T> implements Refreshable<T> {
     }
 
     /** Updates the child refreshable, while still allowing that child refreshable to be garbage collected. */
-    private static final class SelfRemovingMapSubscriber<T, R> {
+    private static final class SelfRemovingMapSubscriber<T, R> implements Consumer<T> {
         private final WeakReference<DefaultRefreshable<R>> childRef;
         private final Function<T, R> function;
 
@@ -165,7 +182,20 @@ public final class DefaultRefreshable<T> implements Refreshable<T> {
             this.function = function;
         }
 
-        void updateChildIfItStillExists(T value) {
+        void disposeIfChildHasBeenCollected() {
+            DefaultRefreshable<R> child = childRef.get();
+
+            // if the child refreshable has been garbage collected, there's no point in updating it anymore
+            // so we 'dispose' of the subscription, which removes it from the parent (and avoids a memory leak).
+            // This is safe because callers of this method are already in a synchronized block.
+            if (child == null) {
+                Preconditions.checkNotNull(cleanUpSubscription, "cleanUpSubscription")
+                        .dispose();
+            }
+        }
+
+        @Override
+        public void accept(T value) {
             DefaultRefreshable<R> child = childRef.get();
 
             // if the child refreshable has been garbage collected, there's no point in updating it anymore
