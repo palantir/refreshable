@@ -1,0 +1,5 @@
+type: fix
+fix:
+  description: Fix a refreshable memory leak with many `map` calls without updates
+  links:
+  - https://github.com/palantir/refreshable/pull/12
