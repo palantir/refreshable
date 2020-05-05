@@ -19,6 +19,4 @@ package com.palantir.refreshable;
 public interface SettableRefreshable<T> extends Refreshable<T> {
 
     void update(T value);
-
-
 }

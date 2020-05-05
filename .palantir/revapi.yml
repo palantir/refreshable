@@ -1,0 +1,11 @@
+acceptedBreaks:
+  "0.1.1":
+    com.palantir.refreshable:refreshable:
+    - code: "java.class.visibilityReduced"
+      old: "class com.palantir.refreshable.DefaultRefreshable<T extends java.lang.Object>"
+      new: "class com.palantir.refreshable.DefaultRefreshable<T extends java.lang.Object>"
+      justification: "Avoiding exposing final classes & constructors in public API"
+    - code: "java.method.visibilityReduced"
+      old: "method void com.palantir.refreshable.DefaultRefreshable<T>::<init>(T)"
+      new: "method void com.palantir.refreshable.DefaultRefreshable<T>::<init>(T)"
+      justification: "Avoiding exposing final classes & constructors in public API"

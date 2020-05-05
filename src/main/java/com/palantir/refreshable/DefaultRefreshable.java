@@ -79,6 +79,7 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
     }
 
     /** Updates the current value and sends the specified value to all subscribers. */
+    @Override
     public synchronized void update(T value) {
         if (!Objects.equals(current, value)) {
             current = value;
