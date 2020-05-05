@@ -49,6 +49,7 @@ public interface Refreshable<T> extends Supplier<T> {
         return new DefaultRefreshable<>(only);
     }
 
+    /** Creates a mutable root {@link Refreshable}, initialized with the given value. */
     static <T> SettableRefreshable<T> create(T initial) {
         return new DefaultRefreshable<T>(initial);
     }
