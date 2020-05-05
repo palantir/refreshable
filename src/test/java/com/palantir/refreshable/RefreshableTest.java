@@ -186,7 +186,7 @@ public final class RefreshableTest {
 
     @Test
     public void subscribers_can_throw_without_blocking_other_subscribers() {
-        DefaultRefreshable<Integer> foo = new DefaultRefreshable<>(1);
+        SettableRefreshable<Integer> foo = Refreshable.create(1);
 
         Consumer<Integer> throwingSubscriber = unused -> {
             throw new RuntimeException("This subscriber throws exceptions - don't want to block others");

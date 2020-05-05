@@ -1,0 +1,6 @@
+type: break
+break:
+  description: The `DefaultRefreshable` final class is no longer exposed, instead
+    users should rely on `Refreshable.create` and the `SettableRefreshable` interface.
+  links:
+  - https://github.com/palantir/refreshable/pull/14

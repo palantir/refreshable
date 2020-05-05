@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
  * purposes of side-effects), to ensure that chains of unused derived Refreshables can be garbage collected, but any
  * undisposed side-effect subscribers keep all their ancestors alive.
  */
-public final class DefaultRefreshable<T> implements Refreshable<T> {
+final class DefaultRefreshable<T> implements SettableRefreshable<T> {
     private static final Logger log = LoggerFactory.getLogger(DefaultRefreshable.class);
     /**
      * Every ten times refreshable.map is called without an update we must purge SelfRemovingMapSubscriber instances
@@ -63,7 +63,7 @@ public final class DefaultRefreshable<T> implements Refreshable<T> {
     @SuppressWarnings("unused")
     private final Optional<?> strongParentReference;
 
-    public DefaultRefreshable(T current) {
+    DefaultRefreshable(T current) {
         this(current, Optional.empty(), new RootSubscriberTracker());
     }
 
@@ -79,6 +79,7 @@ public final class DefaultRefreshable<T> implements Refreshable<T> {
     }
 
     /** Updates the current value and sends the specified value to all subscribers. */
+    @Override
     public synchronized void update(T value) {
         if (!Objects.equals(current, value)) {
             current = value;
