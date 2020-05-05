@@ -7,7 +7,7 @@ com.uber.nullaway:nullaway = 0.7.9
 
 # test deps
 org.junit.jupiter:* = 5.6.2
-org.assertj:assertj-core = 3.15.0
+org.assertj:assertj-core = 3.16.0
 org.assertj:assertj-guava = 3.3.0
 org.mockito:* = 3.3.3
 org.jmock:jmock = 2.12.0
