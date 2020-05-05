@@ -48,4 +48,8 @@ public interface Refreshable<T> extends Supplier<T> {
     static <T> Refreshable<T> only(T only) {
         return new DefaultRefreshable<>(only);
     }
+
+    static <T> SettableRefreshable<T> create(T initial) {
+        return new DefaultRefreshable<T>(initial);
+    }
 }
