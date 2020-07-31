@@ -96,11 +96,6 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
     }
 
     @Override
-    public T get() {
-        return current;
-    }
-
-    @Override
     public synchronized Disposable subscribe(Consumer<? super T> throwingSubscriber) {
         SideEffectSubscriber<? super T> trackedSubscriber =
                 rootSubscriberTracker.newSideEffectSubscriber(throwingSubscriber, this);

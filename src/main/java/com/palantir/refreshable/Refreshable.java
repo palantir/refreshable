@@ -31,7 +31,9 @@ public interface Refreshable<T> extends Supplier<T> {
      * @see #current
      */
     @Override
-    T get();
+    default T get() {
+        return current();
+    }
 
     /**
      * Subscribes to changes to {@code T} and invokes the given {@link Consumer} with the {@link #current} T first, and
@@ -46,7 +48,7 @@ public interface Refreshable<T> extends Supplier<T> {
     <R> Refreshable<R> map(Function<? super T, R> function);
 
     static <T> Refreshable<T> only(T only) {
-        return new DefaultRefreshable<>(only);
+        return new ImmutableRefreshable<>(only);
     }
 
     /** Creates a mutable root {@link Refreshable}, initialized with the given value. */
