@@ -18,16 +18,20 @@ package com.palantir.refreshable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.palantir.logsafe.Preconditions;
 import com.palantir.logsafe.UnsafeArg;
 import java.lang.ref.WeakReference;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.annotation.Nullable;
@@ -49,12 +53,14 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
      */
     private static final int CLEAN_THRESHOLD = 10;
 
-    @GuardedBy("this")
-    private final Set<Consumer<? super T>> orderedSubscribers = new LinkedHashSet<>();
+    private final Set<Consumer<? super T>> orderedSubscribers = Collections.synchronizedSet(new LinkedHashSet<>());
 
     private final RootSubscriberTracker rootSubscriberTracker;
     private volatile T current;
     private final AtomicInteger mapsSinceLastUpdate = new AtomicInteger();
+    private final AtomicBoolean cleaningSubscribers = new AtomicBoolean();
+    private final Lock writeLock;
+    private final Lock readLock;
 
     /**
      * Ensures that in a long chain of mapped refreshables, intermediate ones can't be garbage collected if derived
@@ -71,6 +77,9 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
         this.current = current;
         this.strongParentReference = strongParentReference;
         this.rootSubscriberTracker = tracker;
+        ReadWriteLock lock = new ReentrantReadWriteLock();
+        writeLock = lock.writeLock();
+        readLock = lock.readLock();
     }
 
     private <R> DefaultRefreshable<R> createChild(R initialChildValue) {
@@ -80,13 +89,18 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
 
     /** Updates the current value and sends the specified value to all subscribers. */
     @Override
-    public synchronized void update(T value) {
-        if (!Objects.equals(current, value)) {
-            current = value;
+    public void update(T value) {
+        writeLock.lock();
+        try {
+            if (!Objects.equals(current, value)) {
+                current = value;
 
-            // iterating over a copy allows SelfRemovingSubscribers to remove themselves without
-            // ConcurrentModificationExceptions
-            ImmutableList.copyOf(orderedSubscribers).forEach(subscriber -> subscriber.accept(value));
+                // iterating over a copy allows SelfRemovingSubscribers to remove themselves without
+                // ConcurrentModificationExceptions
+                ImmutableList.copyOf(orderedSubscribers).forEach(subscriber -> subscriber.accept(value));
+            }
+        } finally {
+            writeLock.unlock();
         }
     }
 
@@ -96,48 +110,81 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
     }
 
     @Override
-    public synchronized Disposable subscribe(Consumer<? super T> throwingSubscriber) {
-        SideEffectSubscriber<? super T> trackedSubscriber =
-                rootSubscriberTracker.newSideEffectSubscriber(throwingSubscriber, this);
+    public Disposable subscribe(Consumer<? super T> throwingSubscriber) {
+        readLock.lock();
+        try {
+            SideEffectSubscriber<? super T> trackedSubscriber =
+                    rootSubscriberTracker.newSideEffectSubscriber(throwingSubscriber, this);
 
-        Disposable disposable = subscribeToSelf(trackedSubscriber);
-        Disposable unsubscribeAndUntrack = () -> {
-            disposable.dispose();
-            rootSubscriberTracker.deleteReferenceTo(trackedSubscriber);
-        };
-        return unsubscribeAndUntrack;
+            Disposable disposable = subscribeToSelf(trackedSubscriber);
+            Disposable unsubscribeAndUntrack = () -> {
+                disposable.dispose();
+                rootSubscriberTracker.deleteReferenceTo(trackedSubscriber);
+            };
+            return unsubscribeAndUntrack;
+        } finally {
+            readLock.unlock();
+        }
     }
 
-    private synchronized Disposable subscribeToSelf(Consumer<? super T> subscriber) {
-        orderedSubscribers.add(subscriber);
-        subscriber.accept(current);
-        return () -> remove(subscriber);
+    private Disposable subscribeToSelf(Consumer<? super T> subscriber) {
+        readLock.lock();
+        try {
+            orderedSubscribers.add(subscriber);
+            subscriber.accept(current);
+            return () -> remove(subscriber);
+        } finally {
+            readLock.unlock();
+        }
     }
 
-    private synchronized void remove(Consumer<? super T> subscriber) {
-        orderedSubscribers.remove(subscriber);
+    private void remove(Consumer<? super T> subscriber) {
+        readLock.lock();
+        try {
+            orderedSubscribers.remove(subscriber);
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    private boolean isCleanupRequiredBeforeMap() {
+        return 0
+                == mapsSinceLastUpdate.updateAndGet(operand -> {
+                    int result = operand + 1;
+                    return result > CLEAN_THRESHOLD ? 0 : result;
+                });
     }
 
     @Override
-    public synchronized <R> Refreshable<R> map(Function<? super T, R> function) {
-        if (mapsSinceLastUpdate.incrementAndGet() > CLEAN_THRESHOLD) {
-            // iterating over a copy allows SelfRemovingSubscribers to remove themselves without
-            // ConcurrentModificationExceptions
-            ImmutableList.copyOf(orderedSubscribers).forEach(value -> {
-                if (value instanceof SelfRemovingMapSubscriber) {
-                    ((SelfRemovingMapSubscriber<?, ?>) value).disposeIfChildHasBeenCollected();
+    public <R> Refreshable<R> map(Function<? super T, R> function) {
+        readLock.lock();
+        try {
+            if (isCleanupRequiredBeforeMap()) {
+                // Avoid concurrent cleans
+                if (!cleaningSubscribers.getAndSet(true)) {
+                    try {
+                        // iterating over a copy allows SelfRemovingSubscribers to remove themselves without
+                        // ConcurrentModificationExceptions
+                        ImmutableList.copyOf(orderedSubscribers).forEach(value -> {
+                            if (value instanceof SelfRemovingMapSubscriber) {
+                                ((SelfRemovingMapSubscriber<?, ?>) value).disposeIfChildHasBeenCollected();
+                            }
+                        });
+                    } finally {
+                        cleaningSubscribers.set(false);
+                    }
                 }
-            });
-            mapsSinceLastUpdate.set(0);
+            }
+            R initialChildValue = function.apply(current);
+            DefaultRefreshable<R> child = createChild(initialChildValue);
+
+            SelfRemovingMapSubscriber<? super T, R> mapSubscriber = new SelfRemovingMapSubscriber<>(function, child);
+            Disposable cleanUp = subscribeToSelf(mapSubscriber);
+            mapSubscriber.cleanUpSubscription = cleanUp;
+            return child;
+        } finally {
+            readLock.unlock();
         }
-        R initialChildValue = function.apply(current);
-        DefaultRefreshable<R> child = createChild(initialChildValue);
-
-        SelfRemovingMapSubscriber<? super T, R> mapSubscriber = new SelfRemovingMapSubscriber<>(function, child);
-        Disposable cleanUp = subscribeToSelf(mapSubscriber);
-        mapSubscriber.cleanUpSubscription = cleanUp;
-
-        return child;
     }
 
     /**
@@ -232,7 +279,7 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
     }
 
     @VisibleForTesting
-    synchronized int subscribers() {
+    int subscribers() {
         return orderedSubscribers.size();
     }
 }
