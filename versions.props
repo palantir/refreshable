@@ -9,5 +9,5 @@ com.uber.nullaway:nullaway = 0.8.0
 org.junit.jupiter:* = 5.7.0
 org.assertj:assertj-core = 3.17.2
 org.assertj:assertj-guava = 3.3.0
-org.mockito:* = 3.5.11
+org.mockito:* = 3.5.13
 org.jmock:jmock = 2.12.0
