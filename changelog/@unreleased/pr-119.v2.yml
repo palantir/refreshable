@@ -1,0 +1,5 @@
+type: improvement
+improvement:
+  description: Log warnings when refreshables have >1000 subscribers
+  links:
+  - https://github.com/palantir/refreshable/pull/119

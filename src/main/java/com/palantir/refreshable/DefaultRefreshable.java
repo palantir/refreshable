@@ -20,7 +20,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.palantir.logsafe.Preconditions;
+import com.palantir.logsafe.SafeArg;
 import com.palantir.logsafe.UnsafeArg;
+import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import java.lang.ref.WeakReference;
 import java.util.LinkedHashSet;
 import java.util.Objects;
@@ -48,6 +50,8 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
      * whose children have been reaped.
      */
     private static final int CLEAN_THRESHOLD = 10;
+
+    private static final int WARN_THRESHOLD = 1000;
 
     @GuardedBy("this")
     private final Set<Consumer<? super T>> orderedSubscribers = new LinkedHashSet<>();
@@ -110,6 +114,22 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
 
     private synchronized Disposable subscribeToSelf(Consumer<? super T> subscriber) {
         orderedSubscribers.add(subscriber);
+        int subscribers = orderedSubscribers.size();
+        if (subscribers > WARN_THRESHOLD) {
+            log.warn(
+                    "Refreshable {} has an excessive number of subscribers: {} and is likely leaking memory. "
+                            + "The current warning threshold is {}.",
+                    SafeArg.of("refreshableIdentifier", System.identityHashCode(this)),
+                    SafeArg.of("numSubscribers", subscribers),
+                    SafeArg.of("warningThreshold", WARN_THRESHOLD),
+                    new SafeRuntimeException("location"));
+        } else if (log.isDebugEnabled()) {
+            log.debug(
+                    "Added a subscription to refreshable {} resulting in {} subscriptions",
+                    SafeArg.of("refreshableIdentifier", System.identityHashCode(this)),
+                    SafeArg.of("numSubscribers", subscribers));
+        }
+
         subscriber.accept(current);
         return () -> remove(subscriber);
     }
@@ -160,7 +180,7 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
             try {
                 unsafeSubscriber.accept(value);
             } catch (RuntimeException e) {
-                log.error("Failed to update refreshable subscriber", UnsafeArg.of("value", value), e);
+                log.error("Failed to update refreshable subscriber with value {}", UnsafeArg.of("value", value), e);
             }
         }
     }
@@ -206,7 +226,7 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
             try {
                 child.update(function.apply(value));
             } catch (RuntimeException e) {
-                log.error("Failed to update refreshable subscriber", UnsafeArg.of("value", value), e);
+                log.error("Failed to update refreshable subscriber with value {}", UnsafeArg.of("value", value), e);
             }
         }
     }
