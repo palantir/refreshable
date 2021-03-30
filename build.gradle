@@ -57,7 +57,7 @@ allprojects {
     apply plugin: 'java-library'
     apply plugin: 'org.inferred.processors'
 
-    sourceCompatibility = 1.8
+    sourceCompatibility = 11
 }
 
 apply plugin: 'com.palantir.external-publish-jar'
