@@ -18,10 +18,10 @@ package com.palantir.refreshable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.palantir.logsafe.Preconditions;
 import com.palantir.logsafe.SafeArg;
 import com.palantir.logsafe.UnsafeArg;
 import com.palantir.logsafe.exceptions.SafeRuntimeException;
+import java.lang.ref.Cleaner;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -29,14 +29,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,11 +47,7 @@ import org.slf4j.LoggerFactory;
  */
 final class DefaultRefreshable<T> implements SettableRefreshable<T> {
     private static final Logger log = LoggerFactory.getLogger(DefaultRefreshable.class);
-    /**
-     * Every ten times refreshable.map is called without an update we must purge SelfRemovingMapSubscriber instances
-     * whose children have been reaped.
-     */
-    private static final int CLEAN_THRESHOLD = 10;
+    private static final Cleaner REFRESHABLE_CLEANER = Cleaner.create();
 
     private static final int WARN_THRESHOLD = 1000;
 
@@ -61,8 +55,6 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
 
     private final RootSubscriberTracker rootSubscriberTracker;
     private volatile T current;
-    private final AtomicInteger mapsSinceLastUpdate = new AtomicInteger();
-    private final AtomicBoolean cleaningSubscribers = new AtomicBoolean();
     private final Lock writeLock;
     private final Lock readLock;
 
@@ -151,61 +143,40 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
         }
     }
 
+    @GuardedBy("readLock")
     private Disposable subscribeToSelf(Consumer<? super T> subscriber) {
         preSubscribeLogging();
-        readLock.lock();
-        try {
-            orderedSubscribers.add(subscriber);
-            subscriber.accept(current);
-            return () -> remove(subscriber);
-        } finally {
-            readLock.unlock();
-        }
+        orderedSubscribers.add(subscriber);
+        subscriber.accept(current);
+        return new DefaultDisposable(orderedSubscribers, subscriber);
     }
 
-    private void remove(Consumer<? super T> subscriber) {
-        readLock.lock();
-        try {
-            orderedSubscribers.remove(subscriber);
-        } finally {
-            readLock.unlock();
-        }
-    }
+    // DefaultDisposable ensures the resulting disposable doesn't accidentally reference a Subscriber object.
+    private static final class DefaultDisposable implements Disposable {
+        private final Set<? extends Consumer<?>> subscribers;
+        private final Consumer<?> subscriber;
 
-    private boolean isCleanupRequiredBeforeMap() {
-        return 0
-                == mapsSinceLastUpdate.updateAndGet(operand -> {
-                    int result = operand + 1;
-                    return result > CLEAN_THRESHOLD ? 0 : result;
-                });
+        DefaultDisposable(Set<? extends Consumer<?>> subscribers, Consumer<?> subscriber) {
+            this.subscribers = subscribers;
+            this.subscriber = subscriber;
+        }
+
+        @Override
+        public void dispose() {
+            subscribers.remove(subscriber);
+        }
     }
 
     @Override
     public <R> Refreshable<R> map(Function<? super T, R> function) {
         readLock.lock();
         try {
-            if (isCleanupRequiredBeforeMap()) {
-                // Avoid concurrent cleans
-                if (!cleaningSubscribers.getAndSet(true)) {
-                    try {
-                        // iterating over a copy allows SelfRemovingSubscribers to remove themselves without
-                        // ConcurrentModificationExceptions
-                        ImmutableList.copyOf(orderedSubscribers).forEach(value -> {
-                            if (value instanceof SelfRemovingMapSubscriber) {
-                                ((SelfRemovingMapSubscriber<?, ?>) value).disposeIfChildHasBeenCollected();
-                            }
-                        });
-                    } finally {
-                        cleaningSubscribers.set(false);
-                    }
-                }
-            }
             R initialChildValue = function.apply(current);
             DefaultRefreshable<R> child = createChild(initialChildValue);
 
             SelfRemovingMapSubscriber<? super T, R> mapSubscriber = new SelfRemovingMapSubscriber<>(function, child);
             Disposable cleanUp = subscribeToSelf(mapSubscriber);
-            mapSubscriber.cleanUpSubscription = cleanUp;
+            REFRESHABLE_CLEANER.register(child, cleanUp::dispose);
             return child;
         } finally {
             readLock.unlock();
@@ -242,43 +213,20 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
         private final WeakReference<DefaultRefreshable<R>> childRef;
         private final Function<T, R> function;
 
-        @Nullable
-        private Disposable cleanUpSubscription = null;
-
         private SelfRemovingMapSubscriber(Function<T, R> function, DefaultRefreshable<R> child) {
             this.childRef = new WeakReference<>(child);
             this.function = function;
         }
 
-        void disposeIfChildHasBeenCollected() {
-            DefaultRefreshable<R> child = childRef.get();
-
-            // if the child refreshable has been garbage collected, there's no point in updating it anymore
-            // so we 'dispose' of the subscription, which removes it from the parent (and avoids a memory leak).
-            // This is safe because callers of this method are already in a synchronized block.
-            if (child == null) {
-                Preconditions.checkNotNull(cleanUpSubscription, "cleanUpSubscription")
-                        .dispose();
-            }
-        }
-
         @Override
         public void accept(T value) {
             DefaultRefreshable<R> child = childRef.get();
-
-            // if the child refreshable has been garbage collected, there's no point in updating it anymore
-            // so we 'dispose' of the subscription, which removes it from the parent (and avoids a memory leak).
-            // This is safe because callers of this method are already in a synchronized block.
-            if (child == null) {
-                Preconditions.checkNotNull(cleanUpSubscription, "cleanUpSubscription")
-                        .dispose();
-                return;
-            }
-
-            try {
-                child.update(function.apply(value));
-            } catch (RuntimeException e) {
-                log.error("Failed to update refreshable subscriber with value {}", UnsafeArg.of("value", value), e);
+            if (child != null) {
+                try {
+                    child.update(function.apply(value));
+                } catch (RuntimeException e) {
+                    log.error("Failed to update refreshable subscriber with value {}", UnsafeArg.of("value", value), e);
+                }
             }
         }
     }
