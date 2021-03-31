@@ -91,8 +91,8 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
             if (!Objects.equals(current, value)) {
                 current = value;
 
-                // iterating over a copy allows SelfRemovingSubscribers to remove themselves without
-                // ConcurrentModificationExceptions
+                // iterating over a copy allows subscriptions to be disposed within an update without causing
+                // ConcurrentModificationExceptions.
                 ImmutableList.copyOf(orderedSubscribers).forEach(subscriber -> subscriber.accept(value));
             }
         } finally {
