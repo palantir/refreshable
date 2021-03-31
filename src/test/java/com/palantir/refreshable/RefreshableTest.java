@@ -32,6 +32,7 @@ import java.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import org.immutables.value.Value;
 import org.jmock.lib.concurrent.DeterministicScheduler;
@@ -320,6 +321,29 @@ public final class RefreshableTest {
             System.gc();
         }
         assertThat(root.subscribers()).isLessThan(iterations);
+    }
+
+    @Test
+    public void testConcurrentUnsubscribe() {
+        DefaultRefreshable<Integer> root = new DefaultRefreshable<>(5);
+        AtomicReference<Consumer<Integer>> consumerRef = new AtomicReference<>();
+        Disposable disposable1 = root.subscribe(input -> {
+            Consumer<Integer> value = consumerRef.get();
+            if (value != null) {
+                value.accept(input);
+            }
+        });
+        Disposable disposable2 = root.subscribe(input -> {
+            Consumer<Integer> value = consumerRef.get();
+            if (value != null) {
+                value.accept(input);
+            }
+        });
+        consumerRef.set(_ignored -> {
+            disposable2.dispose();
+            disposable1.dispose();
+        });
+        root.update(1);
     }
 
     private void updateConfig(Config conf) throws Exception {
