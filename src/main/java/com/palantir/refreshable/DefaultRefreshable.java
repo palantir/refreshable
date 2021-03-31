@@ -51,6 +51,11 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
 
     private static final int WARN_THRESHOLD = 1000;
 
+    // Subscribers are updated in deterministic order based on registration order. This prevents a class
+    // of bugs where a listener on a refreshable uses a refreshable mapped from itself, and guarantees the child
+    // mappings will be up-to-date before the listener is executed, as long as the input mapping occurred before
+    // the subscription. While we strongly recommend against this kind of dependency, it's complicated to detect
+    // in large projects with layers of indirection.
     private final Set<Consumer<? super T>> orderedSubscribers = Collections.synchronizedSet(new LinkedHashSet<>());
 
     private final RootSubscriberTracker rootSubscriberTracker;
