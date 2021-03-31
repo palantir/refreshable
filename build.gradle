@@ -69,6 +69,7 @@ dependencies {
 
     testImplementation 'org.assertj:assertj-core'
     testImplementation 'org.assertj:assertj-guava'
+    testImplementation 'org.awaitility:awaitility'
     testImplementation 'org.immutables:value::annotations'
     testImplementation 'org.jmock:jmock'
     testImplementation 'org.junit.jupiter:junit-jupiter'
