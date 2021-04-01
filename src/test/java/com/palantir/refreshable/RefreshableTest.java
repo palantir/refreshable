@@ -226,35 +226,6 @@ public final class RefreshableTest {
 
     @Test
     @SuppressWarnings({"UnusedVariable", "StrictUnusedVariable"})
-    public void map_on_grandchild_still_works_if_intermediaries_are_no_longer_externally_referenced() {
-        DefaultRefreshable<Integer> root = new DefaultRefreshable<>(5);
-
-        DefaultRefreshable<Integer> child = (DefaultRefreshable<Integer>) root.map(number -> number * 2);
-        Refreshable<Integer> grandChild = child.map(number -> number * -1);
-        assertThat(root.subscribers()).isOne();
-
-        child = null;
-        // Several iterations to increase failure probability in the case
-        // a single GC isn't sufficient.
-        for (int i = 0; i < 10; i++) {
-            triggerGarbageCollection();
-
-            assertThat(root.subscribers()).isOne();
-            root.update(2);
-            assertThat(grandChild.current()).isEqualTo(-4);
-        }
-
-        grandChild = null;
-        Awaitility.waitAtMost(Duration.ofSeconds(3)).untilAsserted(() -> {
-            // Attempt to force a GC each run
-            triggerGarbageCollection();
-            root.update(9);
-            assertThat(root.subscribers()).isZero();
-        });
-    }
-
-    @Test
-    @SuppressWarnings({"UnusedVariable", "StrictUnusedVariable"})
     public void subscribe_on_child_still_works_if_there_are_no_references_to_the_child() {
         DefaultRefreshable<Integer> root = new DefaultRefreshable<>(5);
         Refreshable<Integer> child = root.map(number -> number * 2);
