@@ -1,0 +1,11 @@
+apply plugin: 'java-library'
+
+dependencies {
+    implementation rootProject
+    implementation 'org.openjdk.jmh:jmh-core'
+    annotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess'
+}
+
+tasks.withType(JavaCompile) {
+    options.errorprone.enabled = false
+}
