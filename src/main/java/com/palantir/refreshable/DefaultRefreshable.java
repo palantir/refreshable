@@ -56,14 +56,14 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
      * mappings will be up-to-date before the listener is executed, as long as the input mapping occurred before
      * the subscription. While we strongly recommend against this kind of dependency, it's complicated to detect
      * in large projects with layers of indirection.
-     * </p>
+     * <p>
      * Consider the following:
      * <pre>{@code
      * SettableRefreshable<Integer> instance = Refreshable.create(1);
      * Refreshable<Integer> refreshablePlusOne = instance.map(i -> i + 1);
      * instance.subscribe(i -> {
      *     // Code invoked here should reliably be able to assume that refreshablePlusOne.current()
-     *     // is i + 1. Without enforcing order, that would not be the case, and vary by jvm initialization!
+     *     // is i + 1. Without enforcing order, that would not be the case and vary by jvm initialization!
      * });
      * }</pre>
      */
