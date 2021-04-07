@@ -16,13 +16,10 @@
 
 buildscript {
     repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        maven { url 'https://palantir.bintray.com/releases' }
         jcenter()
-        maven {
-            url 'https://dl.bintray.com/palantir/releases/'
-        }
-        maven {
-            url 'https://plugins.gradle.org/m2/'
-        }
     }
 
     dependencies {
@@ -47,10 +44,9 @@ allprojects {
     version System.env.CIRCLE_TAG ?: gitVersion()
 
     repositories {
+        mavenCentral()
+        maven { url 'https://palantir.bintray.com/releases' }
         jcenter()
-        maven {
-            url 'https://dl.bintray.com/palantir/releases/'
-        }
     }
 
     apply plugin: 'com.palantir.java-format'
