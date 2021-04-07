@@ -58,6 +58,9 @@ final class LazyRefreshable<T, U> implements Refreshable<T> {
         this.nonLazyParent = nonLazyParent;
         this.maybeLazyParent = maybeLazyParent;
         this.function = function;
+        // Ensure a value can be created when there's no previous value, failures will throw.
+        // Without an initial value, future calls to `current()` could throw exceptions.
+        current();
     }
 
     @Override
