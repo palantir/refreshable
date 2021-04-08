@@ -94,11 +94,6 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
         readLock = lock.readLock();
     }
 
-    private <R> DefaultRefreshable<R> createChild(R initialChildValue) {
-        Optional<?> parentReference = Optional.of(this);
-        return new DefaultRefreshable<>(initialChildValue, parentReference, rootSubscriberTracker);
-    }
-
     /** Updates the current value and sends the specified value to all subscribers. */
     @Override
     public void update(T value) {
@@ -127,13 +122,7 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
         try {
             SideEffectSubscriber<? super T> trackedSubscriber =
                     rootSubscriberTracker.newSideEffectSubscriber(throwingSubscriber, this);
-
-            Disposable disposable = subscribeToSelf(trackedSubscriber);
-            Disposable unsubscribeAndUntrack = () -> {
-                disposable.dispose();
-                rootSubscriberTracker.deleteReferenceTo(trackedSubscriber);
-            };
-            return unsubscribeAndUntrack;
+            return subscribeToSelf(trackedSubscriber, rootSubscriberTracker::deleteReferenceTo);
         } finally {
             readLock.unlock();
         }
@@ -159,13 +148,56 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
         }
     }
 
+    @Override
+    public <R> Refreshable<R> map(Function<? super T, R> function) {
+        readLock.lock();
+        try {
+            R initialChildValue = function.apply(current);
+            SettableRefreshable<R> child = createSettableChild(initialChildValue);
+
+            // Contract for Cleaner#register states that the Runnable should never reference the object being registered
+            Disposable disposable = registerMapSubscriber(function, new WeakReference<>(child));
+
+            REFRESHABLE_CLEANER.register(child, disposable::dispose);
+
+            return child;
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    private <R> SettableRefreshable<R> createSettableChild(R initialChildValue) {
+        Optional<?> parentReference = Optional.of(this);
+        return new DefaultRefreshable<>(initialChildValue, parentReference, rootSubscriberTracker);
+    }
+
+    private <R> Disposable registerMapSubscriber(
+            Function<? super T, R> function, WeakReference<SettableRefreshable<R>> childRef) {
+        MappingSubscriber<? super T, R> mapSubscriber = new MappingSubscriber<>(function, childRef);
+        return subscribeToSelf(mapSubscriber, _ignored -> {});
+    }
+
     @GuardedBy("readLock")
-    private Disposable subscribeToSelf(Consumer<? super T> subscriber) {
+    private <C extends NoThrowSubscriber<? super T>> Disposable subscribeToSelf(
+            C subscriber, DisposeListener<C> disposeListener) {
         preSubscribeLogging();
+        // The subscriber promises not to throw, so there isn't a way we could have a hanging
         orderedSubscribers.add(subscriber);
         subscriber.accept(current);
-        return new DefaultDisposable(orderedSubscribers, subscriber);
+        return new NotifyingDisposable<>(
+                subscriberToRemove -> {
+                    orderedSubscribers.remove(subscriberToRemove);
+                    disposeListener.disposed(subscriberToRemove);
+                },
+                subscriber);
     }
+
+    interface DisposeListener<C extends Consumer<?>> {
+        void disposed(C consumer);
+    }
+
+    // Marker interface for documentation: if you implement this, you must promise not to throw!
+    interface NoThrowSubscriber<T> extends Consumer<T> {}
 
     /**
      * A {@link Disposable} object shouldn't prevent a {@link Refreshable} from being garbage collected if the
@@ -178,34 +210,18 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
      * // root should be garbage collected, nothing can update the SettableRefreshable value.
      * }</pre>
      */
-    private static final class DefaultDisposable implements Disposable {
-        private final Set<? extends Consumer<?>> subscribers;
-        private final Consumer<?> subscriber;
+    private static final class NotifyingDisposable<C extends Consumer<?>> implements Disposable {
+        private final DisposeListener<C> listener;
+        private final C subscriber;
 
-        DefaultDisposable(Set<? extends Consumer<?>> subscribers, Consumer<?> subscriber) {
-            this.subscribers = subscribers;
+        NotifyingDisposable(DisposeListener<C> listener, C subscriber) {
+            this.listener = listener;
             this.subscriber = subscriber;
         }
 
         @Override
         public void dispose() {
-            subscribers.remove(subscriber);
-        }
-    }
-
-    @Override
-    public <R> Refreshable<R> map(Function<? super T, R> function) {
-        readLock.lock();
-        try {
-            R initialChildValue = function.apply(current);
-            DefaultRefreshable<R> child = createChild(initialChildValue);
-
-            SelfRemovingMapSubscriber<? super T, R> mapSubscriber = new SelfRemovingMapSubscriber<>(function, child);
-            Disposable cleanUp = subscribeToSelf(mapSubscriber);
-            REFRESHABLE_CLEANER.register(child, cleanUp::dispose);
-            return child;
-        } finally {
-            readLock.unlock();
+            listener.disposed(subscriber);
         }
     }
 
@@ -213,7 +229,7 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
      * Purely for GC purposes - this class holds a reference to its parent refreshable. Instances of this class are
      * themselves tracked by the {@link RootSubscriberTracker}.
      */
-    private static class SideEffectSubscriber<T> implements Consumer<T> {
+    private static class SideEffectSubscriber<T> implements NoThrowSubscriber<T> {
         private final Consumer<T> unsafeSubscriber;
 
         @SuppressWarnings("unused")
@@ -235,18 +251,18 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
     }
 
     /** Updates the child refreshable, while still allowing that child refreshable to be garbage collected. */
-    private static final class SelfRemovingMapSubscriber<T, R> implements Consumer<T> {
-        private final WeakReference<DefaultRefreshable<R>> childRef;
+    private static final class MappingSubscriber<T, R> implements NoThrowSubscriber<T> {
+        private final WeakReference<SettableRefreshable<R>> childRef;
         private final Function<T, R> function;
 
-        private SelfRemovingMapSubscriber(Function<T, R> function, DefaultRefreshable<R> child) {
-            this.childRef = new WeakReference<>(child);
+        private MappingSubscriber(Function<T, R> function, WeakReference<SettableRefreshable<R>> childRef) {
+            this.childRef = childRef;
             this.function = function;
         }
 
         @Override
         public void accept(T value) {
-            DefaultRefreshable<R> child = childRef.get();
+            SettableRefreshable<R> child = childRef.get();
             if (child != null) {
                 try {
                     child.update(function.apply(value));
@@ -266,7 +282,7 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
         private final Set<SideEffectSubscriber<?>> liveSubscribers = ConcurrentHashMap.newKeySet();
 
         <T> SideEffectSubscriber<? super T> newSideEffectSubscriber(
-                Consumer<? super T> unsafeSubscriber, DefaultRefreshable<T> parent) {
+                Consumer<? super T> unsafeSubscriber, Refreshable<T> parent) {
             SideEffectSubscriber<? super T> freshSubscriber = new SideEffectSubscriber<>(unsafeSubscriber, parent);
             liveSubscribers.add(freshSubscriber);
             return freshSubscriber;
