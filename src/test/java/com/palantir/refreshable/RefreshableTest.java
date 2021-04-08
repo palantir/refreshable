@@ -32,7 +32,9 @@ import java.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import org.awaitility.Awaitility;
 import org.immutables.value.Value;
 import org.jmock.lib.concurrent.DeterministicScheduler;
 import org.junit.jupiter.api.BeforeEach;
@@ -232,18 +234,23 @@ public final class RefreshableTest {
         assertThat(root.subscribers()).isOne();
 
         child = null;
-        System.gc();
+        // Several iterations to increase failure probability in the case
+        // a single GC isn't sufficient.
+        for (int i = 0; i < 10; i++) {
+            triggerGarbageCollection();
 
-        assertThat(root.subscribers()).isOne();
-        root.update(2);
-        assertThat(grandChild.current()).isEqualTo(-4);
+            assertThat(root.subscribers()).isOne();
+            root.update(2);
+            assertThat(grandChild.current()).isEqualTo(-4);
+        }
 
         grandChild = null;
-        System.gc();
-
-        assertThat(root.subscribers()).isOne();
-        root.update(9);
-        assertThat(root.subscribers()).isZero();
+        Awaitility.waitAtMost(Duration.ofSeconds(3)).untilAsserted(() -> {
+            // Attempt to force a GC each run
+            triggerGarbageCollection();
+            root.update(9);
+            assertThat(root.subscribers()).isZero();
+        });
     }
 
     @Test
@@ -260,7 +267,7 @@ public final class RefreshableTest {
         assertThat(testSubscriber.get()).isEqualTo(10);
         child = null;
         thowawayLambda = null;
-        System.gc();
+        triggerGarbageCollection();
 
         assertThat(root.subscribers()).isOne();
         root.update(6);
@@ -280,11 +287,11 @@ public final class RefreshableTest {
         WeakReference<?> subscriberWeakRef = new WeakReference<>(subscriber);
 
         subscriber = null;
-        System.gc();
+        triggerGarbageCollection();
         assertThat(subscriberWeakRef.get()).isNotNull();
 
         root = null;
-        System.gc();
+        triggerGarbageCollection();
         assertThat(subscriberWeakRef.get()).isNull();
     }
 
@@ -297,7 +304,7 @@ public final class RefreshableTest {
         NoOpConsumer subscriber = new NoOpConsumer();
         child.subscribe(subscriber);
 
-        System.gc();
+        triggerGarbageCollection();
 
         assertThat(root.subscribers()).isOne();
 
@@ -305,7 +312,7 @@ public final class RefreshableTest {
         child = null;
         subscriber = null;
         root = null;
-        System.gc();
+        triggerGarbageCollection();
 
         assertThat(subscriberWeakRef.get()).isNull();
     }
@@ -320,6 +327,29 @@ public final class RefreshableTest {
             System.gc();
         }
         assertThat(root.subscribers()).isLessThan(iterations);
+    }
+
+    @Test
+    public void testConcurrentUnsubscribe() {
+        DefaultRefreshable<Integer> root = new DefaultRefreshable<>(5);
+        AtomicReference<Consumer<Integer>> consumerRef = new AtomicReference<>();
+        Disposable disposable1 = root.subscribe(input -> {
+            Consumer<Integer> value = consumerRef.get();
+            if (value != null) {
+                value.accept(input);
+            }
+        });
+        Disposable disposable2 = root.subscribe(input -> {
+            Consumer<Integer> value = consumerRef.get();
+            if (value != null) {
+                value.accept(input);
+            }
+        });
+        consumerRef.set(_ignored -> {
+            disposable2.dispose();
+            disposable1.dispose();
+        });
+        root.update(1);
     }
 
     private void updateConfig(Config conf) throws Exception {
@@ -339,5 +369,18 @@ public final class RefreshableTest {
     private static final class NoOpConsumer implements Consumer<Integer> {
         @Override
         public void accept(Integer _value) {}
+    }
+
+    // This validates that some form of garbage collection occurs, but that doesn't necessarily
+    // imply all garbage has been collected.
+    private static void triggerGarbageCollection() {
+        WeakReference<Object> reference = new WeakReference<>(new byte[8192]);
+        Awaitility.waitAtMost(Duration.ofSeconds(3)).untilAsserted(() -> {
+            System.gc();
+            assertThat(reference.get())
+                    .as("Failed to cause a garbage collection. This represents an issue with the "
+                            + "testing framework, not necessarily the library itself.")
+                    .isNull();
+        });
     }
 }

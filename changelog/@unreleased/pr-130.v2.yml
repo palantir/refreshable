@@ -1,0 +1,5 @@
+type: break
+break:
+  description: Refreshable Performance improvements to prevent services from grinding to a halt when they use Refreshable in unintended ways. This change is considered a break because it requires java 11.
+  links:
+  - https://github.com/palantir/refreshable/pull/130
