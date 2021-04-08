@@ -18,6 +18,7 @@ package com.palantir.refreshable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.palantir.logsafe.SafeArg;
 import com.palantir.logsafe.UnsafeArg;
 import com.palantir.logsafe.exceptions.SafeRuntimeException;
@@ -47,7 +48,10 @@ import org.slf4j.LoggerFactory;
  */
 final class DefaultRefreshable<T> implements SettableRefreshable<T> {
     private static final Logger log = LoggerFactory.getLogger(DefaultRefreshable.class);
-    private static final Cleaner REFRESHABLE_CLEANER = Cleaner.create();
+    private static final Cleaner REFRESHABLE_CLEANER = Cleaner.create(new ThreadFactoryBuilder()
+            .setNameFormat("DefaultRefreshable-Cleaner-%d")
+            .setDaemon(true)
+            .build());
 
     private static final int WARN_THRESHOLD = 1000;
 
