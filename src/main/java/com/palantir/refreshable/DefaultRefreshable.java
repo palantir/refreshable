@@ -133,33 +133,30 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
                     rootSubscriberTracker.newSideEffectSubscriber(throwingSubscriber, this);
 
             Disposable disposable = subscribeToSelf(trackedSubscriber);
-            Disposable unsubscribeAndUntrack = () -> {
-                disposable.dispose();
-                rootSubscriberTracker.deleteReferenceTo(trackedSubscriber);
-            };
-            return unsubscribeAndUntrack;
+            return new SubscribeDisposable(disposable, rootSubscriberTracker, trackedSubscriber);
         } finally {
             readLock.unlock();
         }
     }
 
-    private void preSubscribeLogging() {
-        if (log.isWarnEnabled()) {
-            int subscribers = orderedSubscribers.size() + 1;
-            if (subscribers > WARN_THRESHOLD) {
-                log.warn(
-                        "Refreshable {} has an excessive number of subscribers: {} and is likely leaking memory. "
-                                + "The current warning threshold is {}.",
-                        SafeArg.of("refreshableIdentifier", System.identityHashCode(this)),
-                        SafeArg.of("numSubscribers", subscribers),
-                        SafeArg.of("warningThreshold", WARN_THRESHOLD),
-                        new SafeRuntimeException("location"));
-            } else if (log.isDebugEnabled()) {
-                log.debug(
-                        "Added a subscription to refreshable {} resulting in {} subscriptions",
-                        SafeArg.of("refreshableIdentifier", System.identityHashCode(this)),
-                        SafeArg.of("numSubscribers", subscribers));
-            }
+    private static final class SubscribeDisposable implements Disposable {
+        private final Disposable delegate;
+        private final RootSubscriberTracker rootSubscriberTracker;
+        private final SideEffectSubscriber<?> trackedSubscriber;
+
+        SubscribeDisposable(
+                Disposable delegate,
+                RootSubscriberTracker rootSubscriberTracker,
+                SideEffectSubscriber<?> trackedSubscriber) {
+            this.delegate = delegate;
+            this.rootSubscriberTracker = rootSubscriberTracker;
+            this.trackedSubscriber = trackedSubscriber;
+        }
+
+        @Override
+        public void dispose() {
+            delegate.dispose();
+            rootSubscriberTracker.deleteReferenceTo(trackedSubscriber);
         }
     }
 
@@ -204,12 +201,32 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
             R initialChildValue = function.apply(current);
             DefaultRefreshable<R> child = createChild(initialChildValue);
 
-            SelfRemovingMapSubscriber<? super T, R> mapSubscriber = new SelfRemovingMapSubscriber<>(function, child);
+            MapSubscriber<? super T, R> mapSubscriber = new MapSubscriber<>(function, child);
             Disposable cleanUp = subscribeToSelf(mapSubscriber);
             REFRESHABLE_CLEANER.register(child, cleanUp::dispose);
             return child;
         } finally {
             readLock.unlock();
+        }
+    }
+
+    private void preSubscribeLogging() {
+        if (log.isWarnEnabled()) {
+            int subscribers = orderedSubscribers.size() + 1;
+            if (subscribers > WARN_THRESHOLD) {
+                log.warn(
+                        "Refreshable {} has an excessive number of subscribers: {} and is likely leaking memory. "
+                                + "The current warning threshold is {}.",
+                        SafeArg.of("refreshableIdentifier", System.identityHashCode(this)),
+                        SafeArg.of("numSubscribers", subscribers),
+                        SafeArg.of("warningThreshold", WARN_THRESHOLD),
+                        new SafeRuntimeException("location"));
+            } else if (log.isDebugEnabled()) {
+                log.debug(
+                        "Added a subscription to refreshable {} resulting in {} subscriptions",
+                        SafeArg.of("refreshableIdentifier", System.identityHashCode(this)),
+                        SafeArg.of("numSubscribers", subscribers));
+            }
         }
     }
 
@@ -239,11 +256,11 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
     }
 
     /** Updates the child refreshable, while still allowing that child refreshable to be garbage collected. */
-    private static final class SelfRemovingMapSubscriber<T, R> implements Consumer<T> {
+    private static final class MapSubscriber<T, R> implements Consumer<T> {
         private final WeakReference<DefaultRefreshable<R>> childRef;
         private final Function<T, R> function;
 
-        private SelfRemovingMapSubscriber(Function<T, R> function, DefaultRefreshable<R> child) {
+        private MapSubscriber(Function<T, R> function, DefaultRefreshable<R> child) {
             this.childRef = new WeakReference<>(child);
             this.function = function;
         }
