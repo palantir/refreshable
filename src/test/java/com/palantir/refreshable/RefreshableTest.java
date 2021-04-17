@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import org.awaitility.Awaitility;
 import org.immutables.value.Value;
 import org.jmock.lib.concurrent.DeterministicScheduler;
@@ -350,6 +351,19 @@ public final class RefreshableTest {
             disposable1.dispose();
         });
         root.update(1);
+    }
+
+    @Test
+    public void testSubscribeToChildCanBeFreed() {
+        Supplier<SettableRefreshable<String>> setup = () -> {
+            SettableRefreshable<String> rootRefreshable = Refreshable.create("initial");
+            Refreshable<String> mapped = rootRefreshable.map(str -> str + str);
+            rootRefreshable.subscribe(update -> mapped.get());
+            return rootRefreshable;
+        };
+        WeakReference<Object> reference = new WeakReference<>(setup.get());
+        triggerGarbageCollection();
+        assertThat(reference.get()).isNull();
     }
 
     private void updateConfig(Config conf) throws Exception {

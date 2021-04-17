@@ -180,17 +180,25 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
      * }</pre>
      */
     private static final class DefaultDisposable implements Disposable {
-        private final Set<? extends Consumer<?>> subscribers;
-        private final Consumer<?> subscriber;
+        // The subscribers set holds a reference to the subscriber, if either reference is
+        // collected, the other isn't meaningful to track either.
+        private final WeakReference<Set<? extends Consumer<?>>> subscribersRef;
+        private final WeakReference<Consumer<?>> subscriberRef;
 
         DefaultDisposable(Set<? extends Consumer<?>> subscribers, Consumer<?> subscriber) {
-            this.subscribers = subscribers;
-            this.subscriber = subscriber;
+            this.subscribersRef = new WeakReference<>(subscribers);
+            this.subscriberRef = new WeakReference<>(subscriber);
         }
 
         @Override
         public void dispose() {
-            subscribers.remove(subscriber);
+            Set<? extends Consumer<?>> subscribers = subscribersRef.get();
+            Consumer<?> subscriber = subscriberRef.get();
+            subscribersRef.clear();
+            subscriberRef.clear();
+            if (subscribers != null && subscriber != null) {
+                subscribers.remove(subscriber);
+            }
         }
     }
 

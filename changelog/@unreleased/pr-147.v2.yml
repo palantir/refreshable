@@ -1,0 +1,5 @@
+type: fix
+fix:
+  description: Allow full tree GC when a subscriber has a ref to a mapped child
+  links:
+  - https://github.com/palantir/refreshable/pull/147
