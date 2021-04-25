@@ -1,0 +1,5 @@
+type: improvement
+improvement:
+  description: Add support for Refreshables with multiple parents. This is useful when you want a Refreshable that updates e.g. whenever on-disk configs change _or_ an HTTP API produces a new result.
+  links:
+  - https://github.com/palantir/refreshable/pull/153
