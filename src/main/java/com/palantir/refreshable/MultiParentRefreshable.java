@@ -160,7 +160,7 @@ public final class MultiParentRefreshable {
         }
 
         @Override
-        public void accept(Object ignored) {
+        public void accept(Object _ignored) {
             SettableRefreshable<R> refreshable = refreshableRef.get();
             if (refreshable == null) {
                 if (subscriptions != null) {
