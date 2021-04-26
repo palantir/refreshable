@@ -73,7 +73,7 @@ public class MultiParentRefreshableTest {
         SettableRefreshable<Integer> left = Refreshable.create(1);
         SettableRefreshable<Integer> right = Refreshable.create(2);
         for (int i = 0; i < NUM_ARRAYS_TO_ALLOCATE_PER_PASS; i++) {
-            Disposable subscription = largeDummyRefreshable(left, right).subscribe(ignored -> {});
+            Disposable subscription = largeDummyRefreshable(left, right).subscribe(_ignored -> {});
             subscription.dispose();
         }
     }
