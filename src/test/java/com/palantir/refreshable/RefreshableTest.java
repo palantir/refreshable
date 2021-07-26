@@ -66,6 +66,7 @@ public final class RefreshableTest {
     DeterministicScheduler scheduler;
     Refreshable<Config> refreshable;
 
+    @SuppressWarnings("NullAway")
     @BeforeEach
     public void before() throws Exception {
         scheduler = new DeterministicScheduler();
@@ -255,7 +256,7 @@ public final class RefreshableTest {
     }
 
     @Test
-    @SuppressWarnings({"UnusedVariable", "StrictUnusedVariable"})
+    @SuppressWarnings({"UnusedVariable", "StrictUnusedVariable", "LambdaMethodReference"})
     public void subscribe_on_child_still_works_if_there_are_no_references_to_the_child() {
         DefaultRefreshable<Integer> root = new DefaultRefreshable<>(5);
         Refreshable<Integer> child = root.map(number -> number * 2);

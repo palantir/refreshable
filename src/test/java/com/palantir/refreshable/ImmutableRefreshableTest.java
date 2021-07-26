@@ -48,6 +48,7 @@ class ImmutableRefreshableTest {
         disposable.dispose();
     }
 
+    @SuppressWarnings("NullAway")
     @ParameterizedTest
     @EnumSource(RefreshableFactory.class)
     void testNullValue(RefreshableFactory factory) {
