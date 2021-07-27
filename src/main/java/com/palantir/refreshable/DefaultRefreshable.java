@@ -22,6 +22,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.palantir.logsafe.SafeArg;
 import com.palantir.logsafe.UnsafeArg;
 import com.palantir.logsafe.exceptions.SafeRuntimeException;
+import com.palantir.logsafe.logger.SafeLogger;
+import com.palantir.logsafe.logger.SafeLoggerFactory;
 import java.lang.ref.Cleaner;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
@@ -36,8 +38,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.annotation.concurrent.GuardedBy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Represents a {@code T} that may be updated over time.
@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * undisposed side-effect subscribers keep all their ancestors alive.
  */
 final class DefaultRefreshable<T> implements SettableRefreshable<T> {
-    private static final Logger log = LoggerFactory.getLogger(DefaultRefreshable.class);
+    private static final SafeLogger log = SafeLoggerFactory.get(DefaultRefreshable.class);
     private static final Cleaner REFRESHABLE_CLEANER = Cleaner.create(new ThreadFactoryBuilder()
             .setNameFormat("DefaultRefreshable-Cleaner-%d")
             .setDaemon(true)
