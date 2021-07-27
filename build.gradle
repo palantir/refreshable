@@ -55,9 +55,9 @@ allprojects {
 apply plugin: 'com.palantir.external-publish-jar'
 
 dependencies {
+    implementation 'com.palantir.safe-logging:logger'
     implementation 'com.palantir.safe-logging:preconditions'
     implementation 'com.google.guava:guava'
-    implementation 'org.slf4j:slf4j-api'
 
     testImplementation 'org.assertj:assertj-core'
     testImplementation 'org.assertj:assertj-guava'
