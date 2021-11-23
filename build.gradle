@@ -49,10 +49,10 @@ allprojects {
     apply plugin: 'java-library'
     apply plugin: 'org.inferred.processors'
 
-    sourceCompatibility = 11
 }
 
 apply plugin: 'com.palantir.external-publish-jar'
+apply plugin: 'com.palantir.baseline-java-versions'
 
 dependencies {
     implementation 'com.palantir.safe-logging:logger'
@@ -85,3 +85,7 @@ plugins.withId('com.palantir.baseline-error-prone', {
         options.errorprone.option('NullAway:AnnotatedPackages', 'com.palantir')
     }
 })
+
+javaVersions {
+    libraryTarget = 11
+}
