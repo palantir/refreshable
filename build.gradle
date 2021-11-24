@@ -88,4 +88,5 @@ plugins.withId('com.palantir.baseline-error-prone', {
 
 javaVersions {
     libraryTarget = 11
+    runtime = 17
 }
