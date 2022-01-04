@@ -44,28 +44,29 @@ allprojects {
     repositories {
         mavenCentral()
     }
+}
 
+subprojects {
     apply plugin: 'com.palantir.java-format'
     apply plugin: 'java-library'
     apply plugin: 'org.inferred.processors'
+    apply plugin: 'java-library'
 
+    tasks.withType(JavaCompile) {
+        options.compilerArgs += ['-Xlint:deprecation', '-Werror']
+    }
+
+    plugins.withId('com.palantir.baseline-error-prone', {
+        dependencies {
+            errorprone 'com.uber.nullaway:nullaway'
+        }
+        tasks.withType(JavaCompile).configureEach {
+            options.errorprone.option('NullAway:AnnotatedPackages', 'com.palantir')
+        }
+    })
 }
 
-apply plugin: 'com.palantir.external-publish-jar'
 apply plugin: 'com.palantir.baseline-java-versions'
-
-tasks.withType(JavaCompile) {
-    options.compilerArgs += ['-Xlint:deprecation', '-Werror']
-}
-
-plugins.withId('com.palantir.baseline-error-prone', {
-    dependencies {
-        errorprone 'com.uber.nullaway:nullaway'
-    }
-    tasks.withType(JavaCompile).configureEach {
-        options.errorprone.option('NullAway:AnnotatedPackages', 'com.palantir')
-    }
-})
 
 javaVersions {
     libraryTarget = 11

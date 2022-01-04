@@ -1,5 +1,3 @@
-apply plugin: 'java-library'
-
 dependencies {
     implementation project(":refreshable")
     implementation 'org.openjdk.jmh:jmh-core'
