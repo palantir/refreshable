@@ -1,0 +1,5 @@
+type: manual-task
+improvement:
+  description: Move refreshable to dedicated sub-project
+  links:
+  - https://github.com/palantir/refreshable/pull/257
