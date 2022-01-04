@@ -1,4 +1,4 @@
-type: manual-task
+type: improvement
 improvement:
   description: Move refreshable to dedicated sub-project
   links:
