@@ -36,6 +36,7 @@ apply plugin: 'com.palantir.baseline'
 apply plugin: 'com.palantir.consistent-versions'
 apply plugin: 'com.palantir.git-version'
 apply plugin: 'com.palantir.revapi'
+apply plugin: 'com.palantir.baseline-java-versions'
 
 allprojects {
     group 'com.palantir.refreshable'
@@ -64,8 +65,6 @@ subprojects {
         }
     })
 }
-
-apply plugin: 'com.palantir.baseline-java-versions'
 
 javaVersions {
     libraryTarget = 11
