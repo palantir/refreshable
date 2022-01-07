@@ -36,6 +36,7 @@ apply plugin: 'com.palantir.baseline'
 apply plugin: 'com.palantir.consistent-versions'
 apply plugin: 'com.palantir.git-version'
 apply plugin: 'com.palantir.revapi'
+apply plugin: 'com.palantir.baseline-java-versions'
 
 allprojects {
     group 'com.palantir.refreshable'
@@ -44,47 +45,26 @@ allprojects {
     repositories {
         mavenCentral()
     }
+}
 
+subprojects {
     apply plugin: 'com.palantir.java-format'
     apply plugin: 'java-library'
     apply plugin: 'org.inferred.processors'
 
-}
-
-apply plugin: 'com.palantir.external-publish-jar'
-apply plugin: 'com.palantir.baseline-java-versions'
-
-dependencies {
-    implementation 'com.palantir.safe-logging:logger'
-    implementation 'com.palantir.safe-logging:preconditions'
-    implementation 'com.google.guava:guava'
-
-    testImplementation 'org.assertj:assertj-core'
-    testImplementation 'org.assertj:assertj-guava'
-    testImplementation 'org.awaitility:awaitility'
-    testImplementation 'org.immutables:value::annotations'
-    testImplementation 'org.jmock:jmock'
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation 'org.mockito:mockito-core'
-    testImplementation 'org.mockito:mockito-junit-jupiter'
-
-    compileOnly 'com.google.code.findbugs:jsr305'
-    testAnnotationProcessor 'org.immutables:value'
-    testCompileOnly 'org.immutables:value::annotations'
-}
-
-tasks.withType(JavaCompile) {
-    options.compilerArgs += ['-Xlint:deprecation', '-Werror']
-}
-
-plugins.withId('com.palantir.baseline-error-prone', {
-    dependencies {
-        errorprone 'com.uber.nullaway:nullaway'
+    tasks.withType(JavaCompile) {
+        options.compilerArgs += ['-Xlint:deprecation', '-Werror']
     }
-    tasks.withType(JavaCompile).configureEach {
-        options.errorprone.option('NullAway:AnnotatedPackages', 'com.palantir')
-    }
-})
+
+    plugins.withId('com.palantir.baseline-error-prone', {
+        dependencies {
+            errorprone 'com.uber.nullaway:nullaway'
+        }
+        tasks.withType(JavaCompile).configureEach {
+            options.errorprone.option('NullAway:AnnotatedPackages', 'com.palantir')
+        }
+    })
+}
 
 javaVersions {
     libraryTarget = 11

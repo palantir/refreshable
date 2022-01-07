@@ -1,5 +1,6 @@
-rootProject.name = 'refreshable'
+rootProject.name = 'refreshable-root'
 
+include 'refreshable'
 include 'refreshable-benchmarks'
 
 boolean isCiServer = System.getenv().containsKey('CI')

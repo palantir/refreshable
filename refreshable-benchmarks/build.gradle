@@ -1,7 +1,5 @@
-apply plugin: 'java-library'
-
 dependencies {
-    implementation rootProject
+    implementation project(":refreshable")
     implementation 'org.openjdk.jmh:jmh-core'
     annotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess'
 }
