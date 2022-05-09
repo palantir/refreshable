@@ -4,7 +4,7 @@ com.google.guava:guava = 31.1-jre
 com.palantir.safe-logging:* = 1.26.0
 org.immutables:* = 2.8.8
 org.slf4j:* = 1.7.36
-com.uber.nullaway:nullaway = 0.9.6
+com.uber.nullaway:nullaway = 0.9.7
 
 # test deps
 org.junit.jupiter:* = 5.8.2
