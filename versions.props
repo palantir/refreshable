@@ -4,13 +4,13 @@ com.google.guava:guava = 31.1-jre
 com.palantir.safe-logging:* = 3.0.0
 org.immutables:* = 2.8.8
 org.slf4j:* = 1.7.36
-com.uber.nullaway:nullaway = 0.9.9
+com.uber.nullaway:nullaway = 0.9.10
 
 # test deps
 org.junit.jupiter:* = 5.9.0
 org.assertj:assertj-core = 3.23.1
 org.assertj:assertj-guava = 3.3.0
-org.mockito:* = 4.6.1
+org.mockito:* = 4.7.0
 org.awaitility:awaitility = 4.2.0
 org.jmock:jmock = 2.12.0
 org.openjdk.jmh:* = 1.35
