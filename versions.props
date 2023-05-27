@@ -1,6 +1,6 @@
 com.fasterxml.jackson.core:jackson-databind = 2.13.2.1
 com.google.code.findbugs:jsr305 = 3.0.2
-com.google.guava:guava = 31.1-jre
+com.google.guava:guava = 32.0.0-jre
 com.palantir.safe-logging:* = 3.4.0
 org.immutables:* = 2.9.3
 org.slf4j:* = 1.7.36
