@@ -19,8 +19,8 @@ package com.palantir.refreshable;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.palantir.logsafe.DoNotLog;
 import com.palantir.logsafe.SafeArg;
-import com.palantir.logsafe.UnsafeArg;
 import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.logsafe.logger.SafeLogger;
 import com.palantir.logsafe.logger.SafeLoggerFactory;
@@ -46,7 +46,7 @@ import javax.annotation.concurrent.GuardedBy;
  * purposes of side-effects), to ensure that chains of unused derived Refreshables can be garbage collected, but any
  * undisposed side-effect subscribers keep all their ancestors alive.
  */
-final class DefaultRefreshable<T> implements SettableRefreshable<T> {
+final class DefaultRefreshable<@DoNotLog T> implements SettableRefreshable<T> {
     private static final SafeLogger log = SafeLoggerFactory.get(DefaultRefreshable.class);
     private static final Cleaner REFRESHABLE_CLEANER = Cleaner.create(new ThreadFactoryBuilder()
             .setNameFormat("DefaultRefreshable-Cleaner-%d")
@@ -242,7 +242,7 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
      * Purely for GC purposes - this class holds a reference to its parent refreshable. Instances of this class are
      * themselves tracked by the {@link RootSubscriberTracker}.
      */
-    private static class SideEffectSubscriber<T> implements Consumer<T> {
+    private static class SideEffectSubscriber<@DoNotLog T> implements Consumer<T> {
         private final Consumer<T> unsafeSubscriber;
 
         @SuppressWarnings("unused")
@@ -258,13 +258,13 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
             try {
                 unsafeSubscriber.accept(value);
             } catch (RuntimeException e) {
-                log.error("Failed to update refreshable subscriber with value {}", UnsafeArg.of("value", value), e);
+                log.error("Failed to update refreshable subscriber", e);
             }
         }
     }
 
     /** Updates the child refreshable, while still allowing that child refreshable to be garbage collected. */
-    private static final class MapSubscriber<T, R> implements Consumer<T> {
+    private static final class MapSubscriber<@DoNotLog T, @DoNotLog R> implements Consumer<T> {
         private final WeakReference<DefaultRefreshable<R>> childRef;
         private final Function<T, R> function;
 
@@ -280,7 +280,7 @@ final class DefaultRefreshable<T> implements SettableRefreshable<T> {
                 try {
                     child.update(function.apply(value));
                 } catch (RuntimeException e) {
-                    log.error("Failed to update refreshable subscriber with value {}", UnsafeArg.of("value", value), e);
+                    log.error("Failed to update refreshable subscriber", e);
                 }
             }
         }

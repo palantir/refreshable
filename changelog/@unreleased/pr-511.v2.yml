@@ -1,0 +1,5 @@
+type: fix
+fix:
+  description: Refreshable values shouldn't be logged
+  links:
+  - https://github.com/palantir/refreshable/pull/511
