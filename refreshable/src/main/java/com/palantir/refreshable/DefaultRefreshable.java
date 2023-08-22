@@ -47,7 +47,7 @@ import javax.annotation.concurrent.GuardedBy;
  * purposes of side-effects), to ensure that chains of unused derived Refreshables can be garbage collected, but any
  * undisposed side-effect subscribers keep all their ancestors alive.
  */
-final class DefaultRefreshable<@DoNotLog T> implements SettableRefreshable<@DoNotLog T> {
+final class DefaultRefreshable<@DoNotLog T> implements SettableRefreshable<T> {
     private static final SafeLogger log = SafeLoggerFactory.get(DefaultRefreshable.class);
     private static final Cleaner REFRESHABLE_CLEANER = Cleaner.create(new ThreadFactoryBuilder()
             .setNameFormat("DefaultRefreshable-Cleaner-%d")
