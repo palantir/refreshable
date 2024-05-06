@@ -115,6 +115,25 @@ public final class RefreshableTest {
     }
 
     @Test
+    public void testMap_calledOnce() {
+        SettableRefreshable<AtomicInteger> ref = Refreshable.create(new AtomicInteger());
+        assertThat(ref.get()).hasValue(0);
+        Refreshable<Integer> mapped = ref.map(AtomicInteger::incrementAndGet);
+        assertThat(mapped.get()).isEqualTo(1);
+        assertThat(ref.get()).hasValue(1);
+    }
+
+    @Test
+    public void testMap_throws() {
+        SettableRefreshable<String> ref = Refreshable.create("");
+        RuntimeException thrown = new RuntimeException();
+        assertThatThrownBy(() -> ref.map(_ignored -> {
+                    throw thrown;
+                }))
+                .isSameAs(thrown);
+    }
+
+    @Test
     public void testSubscribe() throws Exception {
         refreshable.subscribe(consumer);
         verify(consumer).accept(CONFIG);
