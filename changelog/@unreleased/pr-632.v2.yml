@@ -1,0 +1,5 @@
+type: improvement
+improvement:
+  description: refreshable.map calls the map function exactly once
+  links:
+  - https://github.com/palantir/refreshable/pull/632

@@ -132,7 +132,7 @@ final class DefaultRefreshable<@DoNotLog T> implements SettableRefreshable<T> {
             SideEffectSubscriber<? super T> trackedSubscriber =
                     rootSubscriberTracker.newSideEffectSubscriber(throwingSubscriber, this);
 
-            Disposable disposable = subscribeToSelf(trackedSubscriber);
+            Disposable disposable = subscribeToSelf(trackedSubscriber, true);
             return new SubscribeDisposable(disposable, rootSubscriberTracker, trackedSubscriber);
         } finally {
             readLock.unlock();
@@ -161,10 +161,12 @@ final class DefaultRefreshable<@DoNotLog T> implements SettableRefreshable<T> {
     }
 
     @GuardedBy("readLock")
-    private Disposable subscribeToSelf(Consumer<? super T> subscriber) {
+    private Disposable subscribeToSelf(Consumer<? super T> subscriber, boolean updateSubscriber) {
         preSubscribeLogging();
         orderedSubscribers.add(subscriber);
-        subscriber.accept(current);
+        if (updateSubscriber) {
+            subscriber.accept(current);
+        }
         return new DefaultDisposable(orderedSubscribers, subscriber);
     }
 
@@ -210,7 +212,9 @@ final class DefaultRefreshable<@DoNotLog T> implements SettableRefreshable<T> {
             DefaultRefreshable<R> child = createChild(initialChildValue);
 
             MapSubscriber<? super T, R> mapSubscriber = new MapSubscriber<>(function, child);
-            Disposable cleanUp = subscribeToSelf(mapSubscriber);
+            // Do not update the subscriber here because we've just computed the value while
+            // holding readLock above to ensure bad functions throw on 'map' invocation.
+            Disposable cleanUp = subscribeToSelf(mapSubscriber, false);
             REFRESHABLE_CLEANER.register(child, cleanUp::dispose);
             return child;
         } finally {
