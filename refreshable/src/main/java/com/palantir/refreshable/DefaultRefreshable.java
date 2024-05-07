@@ -18,6 +18,7 @@ package com.palantir.refreshable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.RateLimiter;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.palantir.logsafe.DoNotLog;
 import com.palantir.logsafe.SafeArg;
@@ -54,6 +55,8 @@ final class DefaultRefreshable<@DoNotLog T> implements SettableRefreshable<T> {
             .build());
 
     private static final int WARN_THRESHOLD = 1000;
+
+    private final RateLimiter warningRateLimiter;
 
     /** Subscribers are updated in deterministic order based on registration order. This prevents a class
      * of bugs where a listener on a refreshable uses a refreshable mapped from itself, and guarantees the child
@@ -93,6 +96,7 @@ final class DefaultRefreshable<@DoNotLog T> implements SettableRefreshable<T> {
         this.current = current;
         this.strongParentReference = strongParentReference;
         this.rootSubscriberTracker = tracker;
+        this.warningRateLimiter = RateLimiter.create(10);
         ReadWriteLock lock = new ReentrantReadWriteLock();
         writeLock = lock.writeLock();
         readLock = lock.readLock();
@@ -225,7 +229,7 @@ final class DefaultRefreshable<@DoNotLog T> implements SettableRefreshable<T> {
     private void preSubscribeLogging() {
         if (log.isWarnEnabled()) {
             int subscribers = orderedSubscribers.size() + 1;
-            if (subscribers > WARN_THRESHOLD) {
+            if (subscribers > WARN_THRESHOLD && warningRateLimiter.tryAcquire()) {
                 log.warn(
                         "Refreshable {} has an excessive number of subscribers: {} and is likely leaking memory. "
                                 + "The current warning threshold is {}.",
