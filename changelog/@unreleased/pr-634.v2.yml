@@ -1,0 +1,5 @@
+type: improvement
+improvement:
+  description: DefaultRefreshable oversubscription logging is rate limited
+  links:
+  - https://github.com/palantir/refreshable/pull/634
