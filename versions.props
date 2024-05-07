@@ -1,10 +1,10 @@
 com.fasterxml.jackson.core:jackson-databind = 2.13.2.1
 com.google.code.findbugs:jsr305 = 3.0.2
-com.google.guava:guava = 33.1.0-jre
+com.google.guava:guava = 33.2.0-jre
 com.palantir.safe-logging:* = 3.7.0
 org.immutables:* = 2.10.1
 org.slf4j:* = 1.7.36
-com.uber.nullaway:nullaway = 0.10.25
+com.uber.nullaway:nullaway = 0.10.26
 
 # test deps
 org.junit.jupiter:* = 5.10.2
