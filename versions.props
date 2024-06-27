@@ -7,7 +7,7 @@ org.slf4j:* = 1.7.36
 com.uber.nullaway:nullaway = 0.11.0
 
 # test deps
-org.junit.jupiter:* = 5.10.2
+org.junit.jupiter:* = 5.10.3
 org.assertj:assertj-core = 3.26.0
 org.assertj:assertj-guava = 3.3.0
 org.mockito:* = 5.12.0
