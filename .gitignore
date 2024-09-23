@@ -55,3 +55,6 @@ __init__.pyc
 .cache/
 .ipynb_checkpoints/
 .vscode/
+
+# Gradle JDKs setup
+!gradle/*
