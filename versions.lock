@@ -15,7 +15,7 @@ org.apache.commons:commons-math3:3.6.1 (1 constraints: bf0adbcc)
 org.jetbrains:annotations:26.0.2 (1 constraints: 36116fd1)
 org.jspecify:jspecify:1.0.0 (1 constraints: 130ae0b4)
 org.openjdk.jmh:jmh-core:1.37 (1 constraints: df04fc30)
-org.slf4j:slf4j-api:1.7.36 (1 constraints: 471091b6)
+org.slf4j:slf4j-api:2.0.17 (1 constraints: 471091b6)
 
 [Test dependencies]
 com.google.code.findbugs:annotations:3.0.1u2 (1 constraints: 450b07da)
