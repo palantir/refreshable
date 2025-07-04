@@ -3,12 +3,12 @@ com.google.code.findbugs:jsr305 = 3.0.2
 com.google.guava:guava = 33.4.8-jre
 com.palantir.safe-logging:* = 3.9.0
 org.immutables:* = 2.11.0
-org.junit.platform:* = 1.13.2
+org.junit.platform:* = 1.13.3
 org.slf4j:* = 2.0.17
 com.uber.nullaway:nullaway = 0.12.7
 
 # test deps
-org.junit.jupiter:* = 5.13.2
+org.junit.jupiter:* = 5.13.3
 org.assertj:assertj-core = 3.27.3
 org.assertj:assertj-guava = 3.3.0
 org.mockito:* = 5.18.0
