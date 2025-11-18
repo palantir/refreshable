@@ -62,7 +62,7 @@ org.hamcrest:hamcrest-core:2.2 (1 constraints: be0cc7ff)
 
 org.hamcrest:hamcrest-library:2.2 (1 constraints: 1607425c)
 
-org.immutables:value:2.11.6 (1 constraints: 3c05383b)
+org.immutables:value:2.11.7 (1 constraints: 3d05393b)
 
 org.jmock:jmock:2.13.1 (1 constraints: 3905393b)
 
