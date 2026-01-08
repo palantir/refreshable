@@ -40,7 +40,8 @@ final class ImmutableRefreshable<T> implements Refreshable<T> {
     }
 
     @Override
-    public Disposable subscribeLazily(Consumer<? super T> consumer) {
+    public Disposable subscribeLazily(Consumer<? super T> _consumer) {
+        // the state will never change, so this is effectively a no-op
         return ImmutableRefreshableDisposable.INSTANCE;
     }
 
