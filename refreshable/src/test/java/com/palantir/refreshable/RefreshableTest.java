@@ -167,6 +167,19 @@ public final class RefreshableTest {
     }
 
     @Test
+    public void testSubscribeLazily_doesNotCallImmediately() {
+        SettableRefreshable<Integer> ref = Refreshable.create(1);
+        AtomicInteger callCount = new AtomicInteger(0);
+
+        ref.subscribeLazily(value -> callCount.incrementAndGet());
+
+        assertThat(callCount.get()).isZero();
+
+        ref.update(2);
+        assertThat(callCount.get()).isOne();
+    }
+
+    @Test
     public void testRefreshable_doesNotBreakOnException() throws Exception {
         IllegalArgumentException exception = new IllegalArgumentException();
         when(producer.call()).thenThrow(exception).thenReturn(UPDATED_CONFIG);

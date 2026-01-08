@@ -143,6 +143,20 @@ final class DefaultRefreshable<@DoNotLog T> implements SettableRefreshable<T> {
         }
     }
 
+    @Override
+    public Disposable subscribeLazily(Consumer<? super T> throwingSubscriber) {
+        readLock.lock();
+        try {
+            SideEffectSubscriber<? super T> trackedSubscriber =
+                    rootSubscriberTracker.newSideEffectSubscriber(throwingSubscriber, this);
+
+            Disposable disposable = subscribeToSelf(trackedSubscriber, false);
+            return new SubscribeDisposable(disposable, rootSubscriberTracker, trackedSubscriber);
+        } finally {
+            readLock.unlock();
+        }
+    }
+
     private static final class SubscribeDisposable implements Disposable {
         private final Disposable delegate;
         private final RootSubscriberTracker rootSubscriberTracker;

@@ -40,6 +40,11 @@ final class ImmutableRefreshable<T> implements Refreshable<T> {
     }
 
     @Override
+    public Disposable subscribeLazily(Consumer<? super T> consumer) {
+        return ImmutableRefreshableDisposable.INSTANCE;
+    }
+
+    @Override
     public <R> Refreshable<R> map(Function<? super T, R> function) {
         return new ImmutableRefreshable<>(function.apply(value));
     }

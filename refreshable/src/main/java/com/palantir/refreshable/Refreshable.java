@@ -42,6 +42,12 @@ public interface Refreshable<T> extends Supplier<T> {
     Disposable subscribe(Consumer<? super T> consumer);
 
     /**
+     * Subscribes to changes to {@code T} without invoking the consumer immediately.
+     * The consumer will only be invoked when future changes occur.
+     */
+    Disposable subscribeLazily(Consumer<? super T> consumer);
+
+    /**
      * Returns a new {@link Refreshable} that handles updates to the {@code R} derived by applying the given
      * {@link Function} to the {@code T} managed by the current {@link Refreshable}.
      */
