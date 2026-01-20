@@ -4,7 +4,7 @@ com.palantir.safe-logging:* = 3.10.0
 org.immutables:* = 2.12.1
 org.junit.platform:* = 6.0.2
 org.slf4j:* = 2.0.17
-com.uber.nullaway:nullaway = 0.12.15
+com.uber.nullaway:nullaway = 0.13.0
 
 # test deps
 org.junit.jupiter:* = 6.0.2
