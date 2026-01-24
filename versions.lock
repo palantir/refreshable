@@ -40,7 +40,7 @@ org.slf4j:slf4j-api:2.0.17 (1 constraints: 471091b6)
 
 com.google.code.findbugs:annotations:3.0.1u2 (1 constraints: 450b07da)
 
-net.bytebuddy:byte-buddy:1.17.7 (2 constraints: 9f161b3f)
+net.bytebuddy:byte-buddy:1.18.3 (2 constraints: 9c16b43e)
 
 net.bytebuddy:byte-buddy-agent:1.17.7 (1 constraints: 4a0b4ede)
 
@@ -50,7 +50,7 @@ org.apache-extras.beanshell:bsh:2.0b6 (1 constraints: ac07626b)
 
 org.apiguardian:apiguardian-api:1.1.2 (6 constraints: 5366ce6e)
 
-org.assertj:assertj-core:3.27.6 (2 constraints: fc1007e1)
+org.assertj:assertj-core:3.27.7 (2 constraints: fd102be1)
 
 org.assertj:assertj-guava:3.3.0 (1 constraints: 08050336)
 
