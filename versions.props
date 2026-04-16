@@ -1,5 +1,5 @@
 com.google.code.findbugs:jsr305 = 3.0.2
-com.google.guava:guava = 33.5.0-jre
+com.google.guava:guava = 33.6.0-jre
 com.palantir.safe-logging:* = 3.13.0
 org.immutables:* = 2.12.1
 org.junit.platform:* = 6.0.3
