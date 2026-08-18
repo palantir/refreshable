@@ -2,11 +2,11 @@
 
 com.google.code.findbugs:jsr305:3.0.2 (2 constraints: bd144d9d)
 
-com.google.errorprone:error_prone_annotations:2.47.0 (5 constraints: e148f59d)
+com.google.errorprone:error_prone_annotations:2.50.0 (5 constraints: db48a699)
 
 com.google.guava:failureaccess:1.0.3 (1 constraints: 160ae3b4)
 
-com.google.guava:guava:33.6.0-jre (1 constraints: ac068753)
+com.google.guava:guava:33.7.0-jre (1 constraints: ad068e53)
 
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava (1 constraints: bd17c918)
 
@@ -28,7 +28,7 @@ org.apache.commons:commons-math3:3.6.1 (1 constraints: bf0adbcc)
 
 org.jetbrains:annotations:26.1.0 (1 constraints: 351170d1)
 
-org.jspecify:jspecify:1.0.0 (7 constraints: 5370d26f)
+org.jspecify:jspecify:1.0.1 (7 constraints: 5470f370)
 
 org.openjdk.jmh:jmh-core:1.37 (1 constraints: df04fc30)
 
