@@ -1,5 +1,0 @@
-type: improvement
-improvement:
-  description: Refreshable.only produces a simple immutable Refreshable object
-  links:
-  - https://github.com/palantir/refreshable/pull/57
