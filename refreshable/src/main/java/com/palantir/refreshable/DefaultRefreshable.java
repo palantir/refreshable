@@ -85,7 +85,6 @@ final class DefaultRefreshable<@DoNotLog T> implements SettableRefreshable<T> {
      * Ensures that in a long chain of mapped refreshables, intermediate ones can't be garbage collected if derived
      * refreshables are still in use. Empty for root refreshables only.
      */
-    @SuppressWarnings("unused")
     private final Optional<?> strongParentReference;
 
     DefaultRefreshable(T current) {
@@ -253,7 +252,6 @@ final class DefaultRefreshable<@DoNotLog T> implements SettableRefreshable<T> {
     private static class SideEffectSubscriber<@DoNotLog T> implements Consumer<T> {
         private final Consumer<T> unsafeSubscriber;
 
-        @SuppressWarnings("unused")
         private final Refreshable<?> strongParentReference;
 
         SideEffectSubscriber(Consumer<T> unsafeSubscriber, Refreshable<?> strongParentReference) {
