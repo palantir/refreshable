@@ -44,7 +44,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-@SuppressWarnings("UnusedVariable")
 @ExtendWith(MockitoExtension.class)
 public final class RefreshableTest {
 
@@ -246,7 +245,7 @@ public final class RefreshableTest {
     }
 
     @Test
-    @SuppressWarnings({"UnusedVariable", "StrictUnusedVariable"})
+    @SuppressWarnings("StrictUnusedVariable")
     public void map_on_grandchild_still_works_if_intermediaries_are_no_longer_externally_referenced() {
         DefaultRefreshable<Integer> root = new DefaultRefreshable<>(5);
 
@@ -275,7 +274,7 @@ public final class RefreshableTest {
     }
 
     @Test
-    @SuppressWarnings({"UnusedVariable", "StrictUnusedVariable", "LambdaMethodReference"})
+    @SuppressWarnings({"LambdaMethodReference", "StrictUnusedVariable"})
     public void subscribe_on_child_still_works_if_there_are_no_references_to_the_child() {
         DefaultRefreshable<Integer> root = new DefaultRefreshable<>(5);
         Refreshable<Integer> child = root.map(number -> number * 2);
