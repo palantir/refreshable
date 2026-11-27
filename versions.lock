@@ -54,7 +54,7 @@ org.assertj:assertj-core:3.27.7 (2 constraints: fd102be1)
 
 org.assertj:assertj-guava:3.3.0 (1 constraints: 08050336)
 
-org.awaitility:awaitility:4.3.0 (1 constraints: 09050836)
+org.awaitility:awaitility:4.4.0 (1 constraints: 0a050b36)
 
 org.hamcrest:hamcrest:2.2 (3 constraints: f51da670)
 
